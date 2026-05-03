@@ -24,7 +24,6 @@ const NAV_ITEMS: NavItem[] = [
     { label: "Servicios", href: "#servicios", image: "/menu/Servicios.png", description: "Soluciones de software a medida, desde arquitectura hasta entrega." },
     { label: "Proyectos", href: "#proyectos", image: "/menu/Proyectos.png", description: "Casos reales, resultados medibles y código que escala." },
     { label: "Nosotros", href: "#nosotros", image: "/menu/Nosotros.png", description: "Un equipo pequeño con ambición grande y metodología de precisión." },
-    { label: "Contacto", href: "#contacto", image: "/menu/Contacto.png", description: "Cuéntanos tu idea. Estamos listos para construirla juntos." },
 ];
 
 export default function NavbarSylvara() {

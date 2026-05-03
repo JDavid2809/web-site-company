@@ -270,16 +270,16 @@ export function Hero() {
 
                 // Phase 3: Enter animations with stagger
                 tl.to(
-                        imageRef.current,
-                        {
-                            opacity: 1,
-                            scale: 1,
-                            rotateZ: 0,
-                            rotateY: 0,
-                            duration: 1,
-                            ease: "elastic.out(1, 0.5)",
-                        }
-                    )
+                    imageRef.current,
+                    {
+                        opacity: 1,
+                        scale: 1,
+                        rotateZ: 0,
+                        rotateY: 0,
+                        duration: 1,
+                        ease: "elastic.out(1, 0.5)",
+                    }
+                )
                     .to(
                         titleRef.current,
                         {
