@@ -1,26 +1,90 @@
 @import "tailwindcss";
 
+/* ─── Tailwind v4: dark mode via .dark class ────────────────────────────────── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ─── Theme tokens ──────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --expo-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Light mode */
+  --background:     #ffffff;
+  --foreground:     #000000;
+  --nav-bg:         rgba(255, 255, 255, 0.82);
+  --nav-bg-scrolled:rgba(255, 255, 255, 0.97);
+  --overlay-bg:     #ffffff;
+  --text-primary:   #000000;
+  --text-muted:     #6b7280;
+  --accent:         #2563eb;
+  --accent-dim:     rgba(37, 99, 235, 0.12);
+  --link-idle:      rgba(0, 0, 0, 0.18);
+  --link-hover:     #000000;
+  --bar-color:      #2563eb;
+  --dot-color:      #2563eb;
+}
+
+.dark {
+  /* Dark mode */
+  --background:     #000000;
+  --foreground:     #ffffff;
+  --nav-bg:         rgba(0, 0, 0, 0.72);
+  --nav-bg-scrolled:rgba(0, 0, 0, 0.96);
+  --overlay-bg:     #000000;
+  --text-primary:   #ffffff;
+  --text-muted:     #6b7280;
+  --accent:         #60a5fa;
+  --accent-dim:     rgba(96, 165, 250, 0.12);
+  --link-idle:      rgba(255, 255, 255, 0.18);
+  --link-hover:     #ffffff;
+  --bar-color:      #60a5fa;
+  --dot-color:      #60a5fa;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-nav-bg: var(--nav-bg);
+  --color-overlay-bg: var(--overlay-bg);
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-link-idle: var(--link-idle);
+  --color-link-hover: var(--link-hover);
+  --color-divider: var(--divider);
+  --font-sans: 'Stack Sans Notch', system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
+html, body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Stack Sans Notch', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.4s, color 0.4s;
+}
+
+/* ─── View Transitions — theme toggle animation ─────────────────────────────── */
+::view-transition-group(root) {
+  animation-timing-function: var(--expo-out);
+}
+
+::view-transition-new(root) {
+  mask: url('/assets/custom-svg.svg') top left / 0 no-repeat;
+  mask-origin: top left;
+  animation: vt-scale 1.5s;
+  animation-fill-mode: both;
+}
+
+::view-transition-old(root),
+.dark::view-transition-old(root) {
+  animation: vt-scale 1.5s;
+  animation-fill-mode: both;
+  z-index: -1;
+  transform-origin: top left;
+}
+
+@keyframes vt-scale {
+  to {
+    mask-size: 200vmax;
+  }
 }
