@@ -4,10 +4,10 @@ import { useEffect, useRef } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Flip } from "gsap/Flip";
+import { MotionPathPlugin } from "gsap/MotionPathPlugin";
 
 if (typeof window !== "undefined") {
-    gsap.registerPlugin(ScrollTrigger, Flip);
+    gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 }
 
 const STEPS = [
@@ -16,250 +16,314 @@ const STEPS = [
         description: "Entendemos tu negocio, objetivos y limitaciones. Definimos el alcance, los KPIs y construimos el roadmap técnico antes de escribir una sola línea de código.",
         accent: "#3b82f6",
         image: "/procesos/Analisis.png",
-        pos: "top-[22%] left-[4%]", w: 280, h: 200,
-        textPos: "top-[22%] left-[calc(4%+310px)]",
+        highlights: ["Auditoría", "KPIs", "Roadmap técnico", "Alcance"],
     },
     {
         title: "Diseño",
         description: "Sistemas de diseño coherentes, prototipado en Figma y validación con usuarios reales. Cada decisión visual está fundamentada en datos de conversión.",
         accent: "#8b5cf6",
         image: "/procesos/Diseño.png",
-        pos: "top-[20%] right-[5%]", w: 220, h: 260,
-        textPos: "top-[20%] right-[calc(5%+250px)]",
+        highlights: ["Figma", "Design System", "Prototipado", "UX Research"],
     },
     {
         title: "Desarrollo",
         description: "Código limpio, arquitectura escalable y CI/CD desde el día uno. Tests automatizados, revisiones de código y deploys continuos que reducen el riesgo.",
         accent: "#10b981",
         image: "/procesos/Desarrollo.png",
-        pos: "bottom-[16%] left-[8%]", w: 320, h: 160,
-        textPos: "bottom-[16%] left-[calc(8%+350px)]",
+        highlights: ["CI / CD", "Code Review", "Testing", "Arquitectura"],
     },
     {
         title: "Entrega",
         description: "Lanzamiento controlado, monitoreo en tiempo real y soporte post-launch. El proyecto no termina con el deploy — termina cuando los resultados son medibles.",
         accent: "#f59e0b",
         image: "/procesos/Entrega.png",
-        pos: "bottom-[6%] right-[6%]", w: 260, h: 200,
-        textPos: "bottom-[6%] right-[calc(6%+290px)]",
+        highlights: ["Deploy", "Monitoreo", "Soporte", "Métricas"],
     },
 ];
 
+interface PosEntry {
+    left?: string;
+    right?: string;
+    top: string;
+    textSide: "left" | "right";
+}
+
+const POSITIONS: PosEntry[] = [
+    { left: "60%",    top: "8%",  textSide: "left"  }, // initial
+    { left: "2%",     top: "36%", textSide: "right" }, // second
+    { right: "2%",    top: "62%", textSide: "left"  }, // third
+    { left: "18%",    top: "88%", textSide: "right" }, // fourth
+];
+
+const C     = 220; // container circular dashed (px)
+const A     = 180; // actor circular imagen (px)
+const INSET = (C - A) / 2; // 20px
+const GAP   = 36;
+
 export default function WorkProcess() {
-    const sectionRef = useRef<HTMLDivElement>(null);
-    const stickyRef = useRef<HTMLDivElement>(null);
-    const endRef = useRef<HTMLDivElement>(null);
-    const boxRef = useRef<HTMLDivElement>(null);
+    const mainRef    = useRef<HTMLDivElement>(null);
+    const finalRef   = useRef<HTMLDivElement>(null);
+    const actorRef   = useRef<HTMLDivElement>(null);
+    const auraRef    = useRef<HTMLDivElement>(null);
     const markerRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const labelRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const boxImgRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const staticImgRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const imgRefs    = useRef<(HTMLDivElement | null)[]>([]);
+    const ghostRefs  = useRef<(HTMLDivElement | null)[]>([]);
 
     useEffect(() => {
-        let flipCtx: gsap.Context | null = null;
+        let ctx: gsap.Context | null = null;
 
         const buildTimeline = () => {
-            flipCtx?.revert();
-            flipCtx = gsap.context(() => {
-                const box = boxRef.current;
+            ctx?.revert();
+            ctx = gsap.context(() => {
+                const actor   = actorRef.current;
                 const markers = markerRefs.current.filter(Boolean) as HTMLDivElement[];
-                const labels = labelRefs.current.filter(Boolean) as HTMLDivElement[];
-                const boxImgs = boxImgRefs.current.filter(Boolean) as HTMLDivElement[];
-                const staticImgs = staticImgRefs.current.filter(Boolean) as HTMLDivElement[];
+                const imgs    = imgRefs.current.filter(Boolean)    as HTMLDivElement[];
+                const ghosts  = ghostRefs.current.filter(Boolean)  as HTMLDivElement[];
 
-                if (!box || markers.length < STEPS.length) return;
+                if (!actor || markers.length < STEPS.length) return;
 
-                // Capturamos los estados destino para FLIP
-                const states = markers.map(m => Flip.getState(m));
-                const STEP_GAP = 2.5;
+                gsap.set(actor, { x: 0, y: 0 });
+
+                const aR = actor.getBoundingClientRect();
+
+                const points = markers.slice(1).map((m) => {
+                    const r = m.getBoundingClientRect();
+                    return {
+                        x: r.left + r.width  / 2 - (aR.left + aR.width  / 2),
+                        y: r.top  + r.height / 2 - (aR.top  + aR.height / 2),
+                    };
+                });
+
+                imgs.forEach((img, i) => gsap.set(img, { autoAlpha: i === 0 ? 1 : 0 }));
+                // Todos los ghosts ocultos al inicio
+                ghosts.forEach((g) => gsap.set(g, { autoAlpha: 0 }));
 
                 const tl = gsap.timeline({
                     scrollTrigger: {
-                        trigger: stickyRef.current,
-                        start: "top top",
-                        endTrigger: endRef.current,
-                        end: "top top",
-                        scrub: 1.2,
-                        pin: stickyRef.current,
+                        trigger:    markers[0],
+                        start:      "clamp(top center)",
+                        endTrigger: finalRef.current,
+                        end:        "clamp(top center)",
+                        scrub:      1,
                     },
                 });
 
-                // --- Estado inicial ---
-                // Textos
-                gsap.set(labels[0], { autoAlpha: 1 });
-                labels.slice(1).forEach((l) => gsap.set(l, { autoAlpha: 0, y: 20 }));
-                // Imágenes estáticas (las que se "quedan")
-                // Ocultas al inicio para evitar que se encimen/dupliquen con la caja móvil
-                staticImgs.forEach((img) => gsap.set(img, { autoAlpha: 0 }));
-                // Color inicial del aura de la caja móvil
-                gsap.set(box, { "--box-shadow-color": STEPS[0].accent });
+                // 1. Actor recorre el path curvo
+                tl.to(actor, {
+                    duration: 1,
+                    ease: "none",
+                    motionPath: { path: points, curviness: 1.5 },
+                }, 0);
 
-                // --- Construcción del Timeline ---
-                states.slice(1).forEach((state, idx) => {
-                    const i = idx + 1; // índice de destino
-                    const pos = idx * STEP_GAP + 0.5; // arranca a los 0.5s para dar tiempo de lectura
+                const seg = 1 / points.length;
+                points.forEach((_, idx) => {
+                    const i    = idx + 1;
+                    const mid  = seg * (idx + 0.5);
+                    const half = seg * 0.18;
 
-                    // 1. Justo cuando la caja arranca, encendemos la imagen estática de la sección actual
-                    // Esto "deja el rastro" sin causar encimados cuando está en reposo.
-                    tl.set(staticImgs[idx], { autoAlpha: 1 }, pos);
+                    // 2. Crossfade imagen en el actor
+                    tl.to(imgs[idx], { autoAlpha: 0, duration: half, ease: "sine.inOut" }, mid - half * 0.8);
+                    tl.to(imgs[i],   { autoAlpha: 1, duration: half, ease: "sine.inOut" }, mid + half * 0.2);
 
-                    // 2. Mover la caja (Flip) a la nueva posición
-                    const flipAnim = Flip.fit(box, state, {
-                        ease: "power2.inOut",
-                        duration: 1,
-                    }) as gsap.core.Tween;
-                    if (flipAnim) tl.add(flipAnim, pos);
+                    // 3. Aura color
+                    tl.to(auraRef.current, {
+                        backgroundColor: STEPS[i].accent,
+                        duration: half * 2,
+                        ease: "sine.inOut",
+                    }, mid - half);
 
-                    // 3. Transición suave y SIMULTÁNEA de la imagen DENTRO de la caja.
-                    if (boxImgs[idx]) tl.to(boxImgs[idx], { autoAlpha: 0, scale: 0.9, duration: 0.5 }, pos + 0.2);
-                    if (boxImgs[i]) tl.fromTo(boxImgs[i], { autoAlpha: 0, scale: 1.1 }, { autoAlpha: 1, scale: 1, duration: 0.5 }, pos + 0.3);
+                    // 4. Ghost de origen: aparece cuando el actor empieza a irse
+                    //    → al subir (scrub reverso) desaparece
+                    if (idx === 0) {
+                        tl.to(ghosts[0], { autoAlpha: 1, duration: seg * 0.25, ease: "power1.out" }, seg * 0.08);
+                    }
 
-                    // 4. Cambiar el color del aura de la caja
-                    tl.to(box, { "--box-shadow-color": STEPS[i].accent, duration: 0.5 }, pos + 0.2);
-
-                    // 5. Mostrar el texto de la nueva sección
-                    tl.to(labels[i], { autoAlpha: 1, y: 0, duration: 0.6, ease: "power2.out" }, pos + 0.3);
+                    // 5. Ghost de destino: aparece cuando el actor llega
+                    //    → al subir desaparece porque el timeline se revierte
+                    tl.to(ghosts[i], { autoAlpha: 1, duration: seg * 0.25, ease: "power1.out" }, seg * i - seg * 0.12);
                 });
-
-                tl.to({}, { duration: 0.6 }); // end pause
             });
         };
 
         buildTimeline();
         window.addEventListener("resize", buildTimeline);
-        return () => { window.removeEventListener("resize", buildTimeline); flipCtx?.revert(); };
+        return () => {
+            window.removeEventListener("resize", buildTimeline);
+            ctx?.revert();
+        };
     }, []);
+
+    // Actor empieza en marker[0]
+    const p0 = POSITIONS[0];
+    const actorStyle: React.CSSProperties = {
+        position: "absolute",
+        width:    A,
+        height:   A,
+        top:      `calc(${p0.top} + ${INSET}px)`,
+        zIndex:   10,
+        ...(p0.left  ? { left:  `calc(${p0.left}  + ${INSET}px)` } : {}),
+        ...(p0.right ? { right: `calc(${p0.right} + ${INSET}px)` } : {}),
+    };
 
     return (
         <>
-            {/* ── Tall outer section ── */}
+            {/* ── Desktop ── */}
             <div
-                ref={sectionRef}
                 id="proceso"
-                className="hidden lg:block relative w-full bg-background transition-colors duration-400"
-                style={{ height: `${STEPS.length * 90}vh` }}
+                className="hidden lg:block w-full bg-background transition-colors duration-400 border-t border-foreground/[0.07]"
             >
-                {/* ── Sticky viewport ── */}
-                <div
-                    ref={stickyRef}
-                    className="relative w-full h-svh overflow-hidden border-t border-foreground/[0.07]"
-                >
-                    {/* Dot grid */}
-                    <div
-                        className="absolute inset-0 pointer-events-none opacity-[0.03]"
-                        style={{
-                            backgroundImage: [
-                                "linear-gradient(rgba(128,128,128,0.08) 2px, transparent 2px)",
-                                "linear-gradient(90deg, rgba(128,128,128,0.08) 2px, transparent 2px)",
-                                "linear-gradient(rgba(128,128,128,0.04) 1px, transparent 1px)",
-                                "linear-gradient(90deg, rgba(128,128,128,0.04) 1px, transparent 1px)",
-                            ].join(", "),
-                            backgroundSize: "100px 100px, 100px 100px, 20px 20px, 20px 20px",
-                            backgroundPosition: "-2px -2px, -2px -2px, -1px -1px, -1px -1px",
-                        }}
-                    />
-
-                    {/* Section header */}
-                    <div className="absolute top-0 left-0 right-0 z-20 flex items-end justify-between px-8 lg:px-14 pt-28 pb-5 border-b border-foreground/[0.06]">
-                        <div className="flex items-baseline gap-4">
-                            <span className="text-[10px] font-mono tracking-[0.32em] uppercase text-accent">
-                                Proceso
-                            </span>
-                            <h2 className="text-[clamp(22px,3vw,40px)] font-bold leading-none tracking-tight text-foreground">
-                                Cómo <span className="font-serif italic font-light text-accent">trabajamos.</span>
-                            </h2>
-                        </div>
-                        <span className="hidden sm:block text-[10px] font-mono tracking-[0.22em] uppercase text-text-muted">
-                            {STEPS.length} fases
-                        </span>
+                {/* Header sticky */}
+                <div className="sticky top-0 z-30 flex items-center justify-between px-8 lg:px-14 py-5 border-b border-foreground/[0.06] bg-background transition-colors duration-400">
+                    <div className="flex items-baseline gap-4">
+                        <span className="text-[10px] font-mono tracking-[0.32em] uppercase text-accent">Proceso</span>
+                        <h2 className="text-[clamp(22px,3vw,40px)] font-bold leading-none tracking-tight text-foreground">
+                            Cómo <span className="font-serif italic font-light text-accent">trabajamos.</span>
+                        </h2>
                     </div>
+                    <span className="hidden sm:block text-[10px] font-mono tracking-[0.22em] uppercase text-text-muted">
+                        {STEPS.length} fases
+                    </span>
+                </div>
 
-                    {/* ── Invisible target markers ── */}
-                    {STEPS.map((s, i) => (
+                {/* ── Main — sección alta, sin pin ── */}
+                <div
+                    ref={mainRef}
+                    className="relative bg-background transition-colors duration-400"
+                    style={{ height: "190vh" }}
+                >
+                    {STEPS.map((step, i) => {
+                        const pos     = POSITIONS[i];
+                        const toRight = pos.textSide === "right";
+
+                        // Label: ocupa todo el espacio horizontal disponible
+                        let labelStyle: React.CSSProperties = {
+                            position:  "absolute",
+                            top:       `calc(${pos.top} + ${C / 2}px)`,
+                            transform: "translateY(-50%)",
+                        };
+                        if (toRight && pos.left) {
+                            labelStyle = { ...labelStyle, left: `calc(${pos.left} + ${C + GAP}px)`, right: "4%" };
+                        } else if (!toRight && pos.left) {
+                            labelStyle = { ...labelStyle, left: "4%", right: `calc(${100 - parseFloat(pos.left)}% + ${GAP}px)` };
+                        } else if (!toRight && pos.right) {
+                            labelStyle = { ...labelStyle, left: "4%", right: `calc(${pos.right} + ${C + GAP}px)` };
+                        }
+
+                        return (
+                            <div key={`phase-${i}`}>
+                                {/* Container circular dashed */}
+                                <div
+                                    className="absolute rounded-full border-2 border-dashed"
+                                    style={{
+                                        left:        pos.left,
+                                        right:       pos.right,
+                                        top:         pos.top,
+                                        width:       C,
+                                        height:      C,
+                                        borderColor: `${step.accent}40`,
+                                    }}
+                                >
+                                    {/* Marker invisible */}
+                                    <div
+                                        ref={(el) => { markerRefs.current[i] = el; }}
+                                        style={{ position: "absolute", left: INSET, top: INSET, width: A, height: A }}
+                                    />
+                                    <div
+                                        className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-background"
+                                        style={{ backgroundColor: step.accent }}
+                                    />
+                                </div>
+
+                                {/* Ghost — imagen estática que se QUEDA cuando el actor llega
+                                    y desaparece al subir (timeline se revierte con scrub) */}
+                                <div
+                                    ref={(el) => { ghostRefs.current[i] = el; }}
+                                    className="absolute pointer-events-none"
+                                    style={{
+                                        left:   pos.left  ? `calc(${pos.left}  + ${INSET}px)` : undefined,
+                                        right:  pos.right ? `calc(${pos.right} + ${INSET}px)` : undefined,
+                                        top:    `calc(${pos.top} + ${INSET}px)`,
+                                        width:  A,
+                                        height: A,
+                                        opacity: 0,
+                                        visibility: "hidden",
+                                    }}
+                                >
+                                    {/* Aura del ghost */}
+                                    <div
+                                        className="absolute inset-0 blur-[45px] opacity-40 scale-[1.6] rounded-full"
+                                        style={{ backgroundColor: step.accent }}
+                                    />
+                                    <Image
+                                        src={step.image}
+                                        alt={step.title}
+                                        fill
+                                        className="object-contain p-4 relative"
+                                        sizes="200px"
+                                    />
+                                </div>
+
+                                {/* Label */}
+                                <div style={labelStyle} className="flex flex-col gap-4">
+                                    <div className="w-8 h-[2px] rounded-full" style={{ backgroundColor: step.accent }} />
+                                    <h3 className="text-[clamp(38px,4.5vw,68px)] font-bold leading-[0.9] tracking-tight text-foreground">
+                                        {step.title}
+                                    </h3>
+                                    <p className="text-[15px] leading-[1.85] text-text-muted">
+                                        {step.description}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2 pt-1">
+                                        {step.highlights.map((tag) => (
+                                            <span
+                                                key={tag}
+                                                className="text-[10px] font-mono tracking-[0.22em] uppercase px-3 py-1.5 rounded-sm border"
+                                                style={{ borderColor: `${step.accent}30`, color: step.accent }}
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {/* ── Actor — sin bg sólido, solo aura + PNG transparente ── */}
+                    <div ref={actorRef} style={actorStyle}>
+                        {/* Aura de color */}
                         <div
-                            key={`marker-${i}`}
-                            ref={(el) => { markerRefs.current[i] = el; }}
-                            className={`absolute ${s.pos} pointer-events-none`}
-                            style={{ width: s.w, height: s.h }}
+                            ref={auraRef}
+                            className="absolute inset-0 -z-10 blur-[50px] opacity-60 scale-[1.8] rounded-full pointer-events-none"
+                            style={{ backgroundColor: STEPS[0].accent }}
                         />
-                    ))}
-
-                    {/* ── Imágenes estáticas (las que se "quedan" y no se borran) ── */}
-                    {STEPS.map((s, i) => (
-                        <div
-                            key={`static-${i}`}
-                            ref={(el) => { staticImgRefs.current[i] = el; }}
-                            className={`absolute ${s.pos} rounded-sm z-0`}
-                            style={{ width: s.w, height: s.h, opacity: 0, visibility: "hidden" }}
-                        >
-                            {/* Aura de fondo suave (sangra hacia afuera del contenedor) */}
-                            <div className="absolute inset-0 -z-10 blur-[50px] opacity-40 scale-125" style={{ backgroundColor: s.accent }} />
-                            <Image
-                                src={s.image}
-                                alt={s.title}
-                                fill
-                                className="object-contain drop-shadow-xl"
-                                sizes="(max-width: 1024px) 280px, 320px"
-                            />
-                        </div>
-                    ))}
-
-                    {/* ── Actor box animado (la imagen que va "bajando") ── 
-                        Es 'libre' (sin borders duros) pero con un aura de color. */}
-                    <div
-                        ref={boxRef}
-                        className={`absolute ${STEPS[0].pos} rounded-sm flex items-center justify-center z-10 transition-shadow duration-500`}
-                        style={{
-                            width: STEPS[0].w,
-                            height: STEPS[0].h,
-                        }}
-                    >
-                        {/* Aura animada de fondo que sigue a la caja principal */}
-                        <div className="absolute inset-0 -z-10 blur-[50px] opacity-40 scale-125 transition-colors duration-500" style={{ backgroundColor: "var(--box-shadow-color, transparent)" }} />
-
-                        {/* Images inside the moving actor box — swapped on each step on timeline ── */}
-                        {STEPS.map((s, i) => (
+                        {/* Imágenes — crossfade conforme avanza el scroll */}
+                        {STEPS.map((step, i) => (
                             <div
-                                key={`moving-${i}`}
-                                ref={(el) => { boxImgRefs.current[i] = el; }}
+                                key={`img-${i}`}
+                                ref={(el) => { imgRefs.current[i] = el; }}
                                 className="absolute inset-0"
                                 style={{ opacity: i === 0 ? 1 : 0, visibility: i === 0 ? "visible" : "hidden" }}
                             >
                                 <Image
-                                    src={s.image}
-                                    alt={s.title}
+                                    src={step.image}
+                                    alt={step.title}
                                     fill
-                                    className="object-contain drop-shadow-2xl"
-                                    sizes="(max-width: 1024px) 280px, 320px"
+                                    className="object-contain p-4 drop-shadow-2xl"
+                                    sizes="200px"
                                     priority={i === 0}
                                 />
                             </div>
                         ))}
                     </div>
-
-                    {/* ── Step label panels (no enumeration, accumulate) ── */}
-                    {STEPS.map((s, i) => (
-                        <div
-                            key={`label-${i}`}
-                            ref={(el) => { labelRefs.current[i] = el; }}
-                            className={`absolute ${s.textPos} z-20 flex flex-col gap-3 max-w-[280px]`}
-                            style={{ opacity: 0, visibility: "hidden" }}
-                        >
-                            <h3 className="text-[clamp(30px,4vw,52px)] font-bold leading-[0.9] tracking-tight text-foreground">
-                                {s.title}
-                            </h3>
-                            <p className="text-[13px] leading-[1.75] text-text-muted">
-                                {s.description}
-                            </p>
-                        </div>
-                    ))}
                 </div>
+
+                <div ref={finalRef} className="h-[8vh] bg-background transition-colors duration-400" />
             </div>
 
-            {/* ── Mobile fallback: static vertical list ── */}
+            {/* ── Mobile ── */}
             <section
                 id="proceso-mobile"
-                className="lg:hidden w-full bg-background border-t border-foreground/[0.07] px-6 pt-10 pb-14"
+                className="lg:hidden w-full bg-background transition-colors duration-400 border-t border-foreground/[0.07] px-6 pt-10 pb-14"
             >
                 <div className="mb-8">
                     <span className="text-[10px] font-mono tracking-[0.32em] uppercase text-accent">Proceso</span>
@@ -267,28 +331,25 @@ export default function WorkProcess() {
                         Cómo <span className="font-serif italic font-light text-accent">trabajamos.</span>
                     </h2>
                 </div>
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-8">
                     {STEPS.map((s, i) => (
                         <div key={i} className="flex gap-4 items-start">
                             <div className="flex-shrink-0 w-[3px] self-stretch rounded-full" style={{ backgroundColor: s.accent }} />
-                            <div className="flex flex-col gap-1.5">
-                                <span className="text-[9px] font-mono tracking-[0.3em] uppercase" style={{ color: s.accent }}>
-                                    {i + 1}
-                                </span>
-                                <h3 className="text-[22px] font-bold tracking-tight text-foreground leading-tight">
-                                    {s.title}
-                                </h3>
-                                <p className="text-[13px] leading-relaxed text-text-muted">
-                                    {s.description}
-                                </p>
+                            <div className="flex flex-col gap-2">
+                                <h3 className="text-[20px] font-bold tracking-tight text-foreground leading-tight">{s.title}</h3>
+                                <p className="text-[13px] leading-relaxed text-text-muted">{s.description}</p>
+                                <div className="flex flex-wrap gap-1.5 mt-1">
+                                    {s.highlights.map((tag) => (
+                                        <span key={tag} className="text-[9px] font-mono tracking-[0.2em] uppercase px-2 py-1 rounded-sm border" style={{ borderColor: `${s.accent}30`, color: s.accent }}>
+                                            {tag}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     ))}
                 </div>
             </section>
-
-            {/* ── End trigger for ScrollTrigger ── */}
-            <div ref={endRef} className="w-full h-0" />
         </>
     );
 }
