@@ -189,7 +189,7 @@ export default function WorkProcess() {
                 <div
                     ref={mainRef}
                     className="relative bg-background transition-colors duration-400"
-                    style={{ height: "190vh" }}
+                    style={{ height: "135vh" }}
                 >
                     {STEPS.map((step, i) => {
                         const pos     = POSITIONS[i];
