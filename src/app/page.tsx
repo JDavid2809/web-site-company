@@ -3,6 +3,7 @@ import { Hero } from "@/components/pages/Home/Hero";
 import ValueProposition from "@/components/pages/Home/ValueProposition";
 import Projects from "@/components/pages/Home/Projects";
 import WorkProcess from "@/components/pages/Home/WorkProcess";
+import Technologies from "@/components/pages/Home/Technologies";
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -13,6 +14,7 @@ export default function Home() {
       <ValueProposition />
       <Projects />
       <WorkProcess />
+      <Technologies />
       <Footer />
     </div>
   );
